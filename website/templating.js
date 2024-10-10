@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(response => response.text())
     .then(layout => {
       const parser = new DOMParser();
-      const layoutDoc = parser.parseFromString(html, 'text/html');
+      const layoutDoc = parser.parseFromString(layout, 'text/html');
 
       const body = document.getElementsByTagName("body")
       const content = document.getElementById("content")
