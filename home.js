@@ -1,3 +1,5 @@
+// MOVE ME !
+
 String.prototype.truncate = String.prototype.truncate ||
   function(n, useWordBoundary) {
     if (this.length <= n) { return this; }
