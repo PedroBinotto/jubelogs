@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
       console.log("layoutDoc", layoutDoc)
 
       layoutDoc.getElementById('main').appendChild(content)
-      body.replaceChildren(layoutDoc.getRootNode())
+      body.replaceChildren(layoutDoc.getElementById("container"))
     })
     .catch(error => console.error(`Error loading layout.html:`, error));
 });
