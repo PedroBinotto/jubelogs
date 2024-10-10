@@ -8,11 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const body = document.getElementsByTagName("body").item(0)
       const content = document.getElementById("content")
 
-      console.log("body", body)
-      console.log("content", content)
-      console.log("document", document)
-      console.log("layoutDoc", layoutDoc)
-
       layoutDoc.getElementById('main').appendChild(content)
       body.replaceChildren(layoutDoc.getElementById("container"))
     })

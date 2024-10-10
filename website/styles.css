@@ -29,8 +29,8 @@
 }
 
 :root {
-  --header-image: url('./assets/header.png');
-  --body-bg-image: url('./assets/bgtile.gif');
+  --header-image: url('/assets/header.png');
+  --body-bg-image: url('/assets/bgtile.gif');
 
   /* colors */
   --content: #43256E;
