@@ -3,8 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(response => response.text())
     .then(layout => {
       const body = document.getElementsByTagName("body")
-      const content = document.getElementsById("content")
-      layout.getElementsById('main').appendChild(content)
+      const content = document.getElementById("content")
+      layout.getElementById('main').appendChild(content)
       body.replaceChildren(layout)
     })
     .catch(error => console.error(`Error loading layout.html:`, error));
