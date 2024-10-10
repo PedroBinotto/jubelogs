@@ -2,16 +2,19 @@ document.addEventListener('DOMContentLoaded', function() {
   fetch('/layout.html')
     .then(response => response.text())
     .then(layout => {
+      const parser = new DOMParser();
+      const layoutDoc = parser.parseFromString(html, 'text/html');
+
       const body = document.getElementsByTagName("body")
       const content = document.getElementById("content")
 
       console.log("body", body)
       console.log("content", content)
       console.log("document", document)
-      console.log("layout", layout)
+      console.log("layoutDoc", layoutDoc)
 
-      layout.getElementById('main').appendChild(content)
-      body.replaceChildren(layout)
+      layoutDoc.getElementById('main').appendChild(content)
+      body.replaceChildren(layoutDoc)
     })
     .catch(error => console.error(`Error loading layout.html:`, error));
 });
