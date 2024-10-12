@@ -12,7 +12,7 @@ def get_date_created(path: pathlib.Path) -> datetime:
 
 def convert_post(src_path: str, target_folder: str, template_path: str) -> dict:
     """
-    Convert the file at src_path and write it to target_folder, given the html template passed in.
+    Convert the file at `src_path` and write it to `target_folder`, given the html template passed in.
     """
     template_soup = BeautifulSoup(template_path, "html.parser")
     src_file = pathlib.Path(src_path)

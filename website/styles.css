@@ -116,15 +116,16 @@ body {
 }
 
 #header {
+  height: 200px;
   width: 100%;
   background-color: #5e4e8c;
-  /* header color here! */
-  height: r00px;
-  /* this is only for a background image! */
-  /* if you want to put images IN the header, 
-      you can add them directly to the <div id="header"></div> element! */
   background-image: var(--header-image);
-  background-size: 100%;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-image: var(--header-image);
+  display: flex;
+  justify-content: center;
+  align-content: center;
 }
 
 /* navigation section!! */
@@ -295,4 +296,24 @@ strong {
   text-shadow: 2px 2px orange;
   background-color: black;
   color: white;
+}
+
+.header-text {
+  font-size: 75px;
+  background-color: black;
+  color: white;
+}
+
+.blog-box {
+  background-color: rgba(36, 20, 69, 0.90);
+}
+
+.synopsis {
+  padding: 0 1rem 0.5rem 1rem;
+}
+
+dd {
+  display: list-item;
+  list-style-type: "☆";
+  padding-inline-start: 1ch;
 }
