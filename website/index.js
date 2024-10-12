@@ -18,16 +18,19 @@ document.addEventListener('DOMContentLoaded', function() {
   surprise.innerHTML = splashes[Math.floor(Math.random() * splashes.length)] + "!"
   posts.reverse().forEach(post => {
     const listItem = document.createElement('li');
+    const date = document.createElement('small');
     const link = document.createElement('a');
     const header = document.createElement('h2');
     const synopsis = document.createElement('p');
 
+    date.innerHTML = `(${post.date ?? 'sem data'}) - `
     header.classList = "special-text"
     link.style = "color: white"
     link.href = post.url;
     link.textContent = post.title;
     synopsis.innerHTML = post.synopsis.truncate(SYNOPSIS_WORD_LIMIT, true)
 
+    header.appendChild(date)
     header.appendChild(link)
 
     listItem.appendChild(header);

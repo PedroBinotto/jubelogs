@@ -1,1 +1,1 @@
-const data = [{"path": "./website/blogs/test_one.html", "title": "My first post!", "date": null, "synopsis": "This is a paragraph"}]
+const posts = [{"url": "/blogs/test_one.html", "title": "My first post!", "date": "2024-10-11", "synopsis": "This is a paragraph"}, {"url": "/blogs/test_two.html", "title": "My second post!", "date": "2024-10-11", "synopsis": "This is a paragraph"}]

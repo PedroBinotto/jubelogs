@@ -1,22 +1,22 @@
 import os
 import pathlib
-import datetime
+from datetime import datetime, timezone
 import markdown
 import json
 from bs4 import BeautifulSoup
 
 
-def get_date_created(path: pathlib.Path) -> datetime.datetime:
-    datetime.datetime.fromtimestamp(path.stat().st_ctime, tz=datetime.timezone.utc)
+def get_date_created(path: pathlib.Path) -> datetime:
+    return datetime.fromtimestamp(path.stat().st_ctime, tz=timezone.utc)
 
 
-def convert_post(
-    src_path: str, target_folder: str, template_soup: BeautifulSoup
-) -> dict:
+def convert_post(src_path: str, target_folder: str, template_path: str) -> dict:
     """
     Convert the file at src_path and write it to target_folder, given the html template passed in.
     """
+    template_soup = BeautifulSoup(template_path, "html.parser")
     src_file = pathlib.Path(src_path)
+
     with open(src_file, "r", encoding="utf-8") as file:
         src_content = file.read()
         compiled_html = BeautifulSoup(
@@ -26,19 +26,18 @@ def convert_post(
     title = compiled_html.find("h1")
     synopsis = compiled_html.find("p").string
 
-    template_soup.title.string = title.string
+    template_soup.title.string = f"jubelogs - {title.string}"
     template_soup.find(id="content").append(compiled_html)
 
-    target_path = os.path.join(
-        target_folder, f"{ os.path.splitext(os.path.basename(src_path))[0]}.html"
-    )
+    target_filename = f"{os.path.splitext(os.path.basename(src_path))[0]}.html"
+    target_path = os.path.join(target_folder, target_filename)
     with open(target_path, "w", encoding="utf-8") as target_file:
         target_file.write(str(template_soup.prettify()))
 
     return {
-        "path": target_path,
+        "url": f"/blogs/{target_filename}",
         "title": title.string,
-        "date": get_date_created(src_file),
+        "date": get_date_created(src_file).strftime("%Y-%m-%d"),
         "synopsis": synopsis,
     }
 
@@ -56,24 +55,23 @@ def compile_blogs(
     with open(post_template, "r", encoding="utf-8") as file:
         template_content = file.read()
 
-    template_soup = BeautifulSoup(template_content, "html.parser")
-
     for filename in os.listdir(source_folder):
         path = os.path.join(source_folder, filename)
         if os.path.isfile(path):
-            blog_paths.append(convert_post(path, target_folder, template_soup))
+            blog_paths.append(convert_post(path, target_folder, template_content))
 
     return blog_paths
 
 
-def compile_links(blogs: list[dict], linkfile_path: str):
+def compile_links(blogs: list[dict], linkfile_path: str) -> None:
     with open(linkfile_path, "w", encoding="utf-8") as file:
-        file.write(f"const data = {json.dumps(blogs)}")
+        blogs.sort(key=lambda obj: datetime.strptime(obj["date"], "%Y-%m-%d"))
+        file.write(f"const posts = {json.dumps(blogs)}")
 
 
 def main(
     source_folder: str, target_folder: str, post_template: str, linkfile_path: str
-):
+) -> None:
     blogs = compile_blogs(source_folder, target_folder, post_template)
     compile_links(blogs, linkfile_path)
 
