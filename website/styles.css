@@ -34,6 +34,7 @@
 
   /* colors */
   --content: #43256E;
+  --transluscent-purp: var(--transluscent-purp);
 }
 
 /* if you have the URL of a font, you can set it below */
@@ -171,7 +172,7 @@ body {
     if you want to style them separately,
     create styles for #leftSidebar and #rightSidebar */
 aside {
-  background-color: rgba(36, 20, 69, 0.90);
+  background-color: var(--transluscent-purp);
   width: 200px;
   padding: 20px;
   font-size: smaller;
@@ -305,7 +306,7 @@ strong {
 }
 
 .blog-box {
-  background-color: rgba(36, 20, 69, 0.90);
+  background-color: var(--transluscent-purp);
 }
 
 .synopsis {
@@ -316,4 +317,8 @@ dd {
   display: list-item;
   list-style-type: "☆";
   padding-inline-start: 1ch;
+}
+
+main img {
+  max-width: 100%;
 }
