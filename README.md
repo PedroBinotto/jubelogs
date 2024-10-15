@@ -23,10 +23,8 @@ blogs are compiled from .md files in `posts`:
     │   ├── bgtile.gif
     │   └── header.png
     ├── index.html
-    ├── index.js
     ├── layout.html
     ├── postlinks.js
-    ├── splashes.js
     ├── styles.css
     └── templating.js
 ```

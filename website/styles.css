@@ -34,7 +34,7 @@
 
   /* colors */
   --content: #43256E;
-  --transluscent-purp: var(--transluscent-purp);
+  --transluscent-purp: rgba(36, 20, 69, 0.90);
 }
 
 /* if you have the URL of a font, you can set it below */

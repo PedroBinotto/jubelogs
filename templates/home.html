@@ -1,0 +1,26 @@
+<div id="content">
+  <h1><em class="special-text" id="surprise">jubelogs</em></h1>
+  <p><strong>Blogs recentes:</strong></p>
+  <div id="blog-list">
+    <!--blogs go here!-->
+  </div>
+  <script>
+    const splashes = [
+      "lorem ipsum",
+      "jubelogs",
+      "canal indisiponível",
+      "volte mais tarde",
+      "hora de dormir",
+      "socorram me subi no onibus em marrocos",
+      "eles estão vendo",
+      "olhe para trás",
+      "heder goes here fdsa fd jhgf jhf jhgfj h j gfds gfh",
+      "vamos passear na floresta... piquenique sera na propriaescola, com show do palhaço.n, jmkjplploobbyrere",
+    ]
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const surprise = document.getElementById("surprise");
+      surprise.innerHTML = splashes[Math.floor(Math.random() * splashes.length)] + "!"
+    });
+  </script>
+</div>
