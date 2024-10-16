@@ -4,6 +4,8 @@
 
 web 1.0 dev was so much more fun :sparkles:
 
+_self-contained, single-purpose, home-grown_ **static blog generator** written in Python
+
 ## compiling blogs
 
 blogs are compiled from .md files in `posts`:
