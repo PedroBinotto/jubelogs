@@ -1,7 +1,6 @@
 import os
 import pathlib
 from datetime import datetime, timezone
-from typing import TypedDict
 import markdown
 from dataclasses import dataclass
 from bs4 import BeautifulSoup
@@ -15,6 +14,8 @@ class Blog:
     title: str
     date: str
     synopsis: str
+    path: str
+    markup: str
 
 
 def date_from_path(path: str) -> str:
@@ -65,13 +66,13 @@ def convert_post(src_path: str, target_folder: str, template_markup: str) -> Blo
     target_filename = f"{os.path.splitext(os.path.basename(src_path))[0]}.html"
     target_path = os.path.join(target_folder, target_filename)
 
-    write_to_path(target_path, target_markup)
-
     return Blog(
         url=f"/blogs/{target_filename}",
         title=title.string,
         date=date_from_path(src_path),
         synopsis=synopsis,
+        path=target_path,
+        markup=target_markup,
     )
 
 
@@ -91,17 +92,22 @@ def compile_blogs(
     for filename in os.listdir(source_folder):
         src_path = os.path.join(source_folder, filename)
         if os.path.isfile(src_path):
-            blogs.append(convert_post(src_path, target_folder, template_markup))
+            blog = convert_post(src_path, target_folder, template_markup)
+            blogs.append(blog)
+            write_to_path(blog.path, blog.markup)
 
     blogs.sort(key=lambda blog: datetime.strptime(blog.date, "%Y-%m-%d"), reverse=True)
 
     return blogs
 
 
-def compile_index(blogs: list[Blog], index_path: str, layout_path: str) -> None:
-    link_template_path = "./templates/blog_link.html"
-    index_page_template_path = "./templates/home.html"
-
+def compile_index(
+    blogs: list[Blog],
+    index_path: str,
+    layout_path: str,
+    link_template_path: str,
+    index_page_template_path: str,
+) -> None:
     soup = soup_from_path(index_page_template_path)
     blog_list = soup.find(id="blog-list")
 
@@ -130,10 +136,17 @@ def compile_index(blogs: list[Blog], index_path: str, layout_path: str) -> None:
 
 
 def main(
-    source_folder: str, target_folder: str, post_template: str, index_path: str
+    source_folder: str,
+    target_folder: str,
+    post_template: str,
+    index_path: str,
+    link_template_path: str,
+    index_page_template_path: str,
 ) -> None:
     blogs = compile_blogs(source_folder, target_folder, post_template)
-    compile_index(blogs, index_path, post_template)
+    compile_index(
+        blogs, index_path, post_template, link_template_path, index_page_template_path
+    )
 
 
 if __name__ == "__main__":
@@ -141,4 +154,14 @@ if __name__ == "__main__":
     target_folder = "./website/blogs"
     template_path = "./templates/layout.html"
     index_path = "./website/index.html"
-    main(source_folder, target_folder, template_path, index_path)
+    link_template_path = "./templates/blog_link.html"
+    index_page_template_path = "./templates/home.html"
+
+    main(
+        source_folder,
+        target_folder,
+        template_path,
+        index_path,
+        link_template_path,
+        index_page_template_path,
+    )
