@@ -39,6 +39,7 @@ def soup_from_path(path: str) -> BeautifulSoup:
 
 
 def apply_layout(content_markup: str, layout_markup: str, page_title: str) -> str:
+    """Apply layout to content markup"""
     content_soup = BeautifulSoup(content_markup, "html.parser")
     layout_soup = BeautifulSoup(layout_markup, "html.parser")
 
@@ -52,6 +53,7 @@ def convert_post(src_path: str, target_folder: str, template_markup: str) -> Blo
     """
     Convert the file at `src_path` and write it to `target_folder`, given the html template passed in.
     """
+
     transpiled_soup = BeautifulSoup(
         markdown.markdown(read_from_path(src_path), extensions=["extra"]), "html.parser"
     )
@@ -87,11 +89,19 @@ def compile_blogs(
 
     os.makedirs(target_folder, exist_ok=True)
 
+    print(
+        [el for el in os.walk(source_folder)]
+    )  # TODO: add blog categorization via subdirectories in src_dir
+
     template_markup = read_from_path(template_path)
 
     for filename in os.listdir(source_folder):
         src_path = os.path.join(source_folder, filename)
-        if os.path.isfile(src_path):
+        if os.path.isfile(src_path) and pathlib.Path(src_path).suffix in [
+            ".md",
+            ".MD",
+            ".markdown",
+        ]:
             blog = convert_post(src_path, target_folder, template_markup)
             blogs.append(blog)
             write_to_path(blog.path, blog.markup)
@@ -101,13 +111,14 @@ def compile_blogs(
     return blogs
 
 
-def compile_index(
+def compile_index(  # TODO: make it generic enough to generate all sub-indexes as well as the main one
     blogs: list[Blog],
     index_path: str,
     layout_path: str,
     link_template_path: str,
     index_page_template_path: str,
 ) -> None:
+    """Compile index.html file with links to all blogs"""
     soup = soup_from_path(index_page_template_path)
     blog_list = soup.find(id="blog-list")
 
