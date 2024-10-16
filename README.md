@@ -2,9 +2,9 @@
 
 [jubelogs.neocities.org](https://jubelogs.neocities.org/)
 
-web 1.0 dev was so much more fun :sparkles:
+web dev 1.0 was so much more fun :sparkles:
 
-_self-contained, single-purpose, home-grown_ **static blog generator** written in Python
+_self-contained, single-purpose, home-grown **static blog generator** written in Python_
 
 ## compiling blogs
 
