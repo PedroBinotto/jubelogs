@@ -19,16 +19,18 @@ blogs are compiled from .md files in `posts`:
 │   └── *** POSTS GO HERE ***
 ├── pyproject.toml
 ├── README.md
-├── template.html
+├── templates
+│   ├── blog_link.html
+│   ├── home.html
+│   └── layout.html
 └── website
     ├── assets
     │   ├── bgtile.gif
     │   └── header.png
+    ├── blogs
+    │   └── *** COMPILED BLOG POSTS ARE PLACED HERE ***
     ├── index.html
-    ├── layout.html
-    ├── postlinks.js
-    ├── styles.css
-    └── templating.js
+    └── styles.css
 ```
 
 posts MUST begin with a top-level H1 heading:

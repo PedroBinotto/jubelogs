@@ -162,4 +162,5 @@ cython_debug/
 #.idea/
 
 website/blogs
-posts/
+website/assets/blogs
+posts/**/*.md
