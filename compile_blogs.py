@@ -1,93 +1,122 @@
 import os
 import pathlib
 from datetime import datetime, timezone
+from typing import TypedDict
 import markdown
+from dataclasses import dataclass
 from bs4 import BeautifulSoup
 
 SYNOPSIS_LENGTH_LIMIT = 200
 
 
-def get_date_created(path: pathlib.Path) -> datetime:
-    return datetime.fromtimestamp(path.stat().st_ctime, tz=timezone.utc)
+@dataclass
+class Blog:
+    url: str
+    title: str
+    date: str
+    synopsis: str
 
 
-def convert_post(src_path: str, target_folder: str, template_markup: str) -> dict:
+def date_from_path(path: str) -> str:
+    return datetime.fromtimestamp(
+        pathlib.Path(path).stat().st_ctime, tz=timezone.utc
+    ).strftime("%Y-%m-%d")
+
+
+def read_from_path(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as file:
+        return file.read()
+
+
+def write_to_path(path: str, contents: str) -> None:
+    with open(path, "w", encoding="utf-8") as file:
+        file.write(contents)
+
+
+def soup_from_path(path: str) -> BeautifulSoup:
+    return BeautifulSoup(read_from_path(path), "html.parser")
+
+
+def apply_layout(content_markup: str, layout_markup: str, page_title: str) -> str:
+    content_soup = BeautifulSoup(content_markup, "html.parser")
+    layout_soup = BeautifulSoup(layout_markup, "html.parser")
+
+    layout_soup.title.string = f"jubelogs - {page_title}"
+    layout_soup.find(id="content").append(content_soup)
+
+    return layout_soup.prettify()
+
+
+def convert_post(src_path: str, target_folder: str, template_markup: str) -> Blog:
     """
     Convert the file at `src_path` and write it to `target_folder`, given the html template passed in.
     """
-    template_soup = BeautifulSoup(template_markup, "html.parser")
-    src_file = pathlib.Path(src_path)
+    transpiled_soup = BeautifulSoup(
+        markdown.markdown(read_from_path(src_path), extensions=["extra"]), "html.parser"
+    )
 
-    with open(src_file, "r", encoding="utf-8") as file:
-        src_content = file.read()
-        compiled_html = BeautifulSoup(
-            markdown.markdown(src_content, extensions=["extra"]), "html.parser"
-        )
+    title = transpiled_soup.find("h1")
+    synopsis = transpiled_soup.find("p").string
 
-    title = compiled_html.find("h1")
-    synopsis = compiled_html.find("p").string
-
-    template_soup.title.string = f"jubelogs - {title.string}"
-    template_soup.find(id="content").append(compiled_html)
+    target_markup = apply_layout(
+        transpiled_soup.prettify(), template_markup, f"jubelogs - {title.string}"
+    )
 
     target_filename = f"{os.path.splitext(os.path.basename(src_path))[0]}.html"
     target_path = os.path.join(target_folder, target_filename)
-    with open(target_path, "w", encoding="utf-8") as target_file:
-        target_file.write(str(template_soup.prettify()))
 
-    return {
-        "url": f"/blogs/{target_filename}",
-        "title": title.string,
-        "date": get_date_created(src_file).strftime("%Y-%m-%d"),
-        "synopsis": synopsis,
-    }
+    write_to_path(target_path, target_markup)
+
+    return Blog(
+        url=f"/blogs/{target_filename}",
+        title=title.string,
+        date=date_from_path(src_path),
+        synopsis=synopsis,
+    )
 
 
 def compile_blogs(
-    source_folder: str, target_folder: str, post_template: str
-) -> list[dict]:
+    source_folder: str, target_folder: str, template_path: str
+) -> list[Blog]:
     """
     Given the path for the source and target folders and the blank html template, convert and write all blog posts to
     location
     """
-    blog_paths = []
+    blogs: list[Blog] = []
+
     os.makedirs(target_folder, exist_ok=True)
 
-    with open(post_template, "r", encoding="utf-8") as file:
-        template_content = file.read()
+    template_markup = read_from_path(template_path)
 
     for filename in os.listdir(source_folder):
-        path = os.path.join(source_folder, filename)
-        if os.path.isfile(path):
-            blog_paths.append(convert_post(path, target_folder, template_content))
+        src_path = os.path.join(source_folder, filename)
+        if os.path.isfile(src_path):
+            blogs.append(convert_post(src_path, target_folder, template_markup))
 
-    blog_paths.sort(
-        key=lambda blog: datetime.strptime(blog["date"], "%Y-%m-%d"), reverse=True
-    )
-    return blog_paths
+    blogs.sort(key=lambda blog: datetime.strptime(blog.date, "%Y-%m-%d"), reverse=True)
+
+    return blogs
 
 
-def compile_index(blogs: list[dict], index_path: str, layout_path: str) -> None:
-    with open("./templates/home.html", "r", encoding="utf-8") as file:
-        soup = BeautifulSoup(file.read(), "html.parser")
+def compile_index(blogs: list[Blog], index_path: str, layout_path: str) -> None:
+    link_template_path = "./templates/blog_link.html"
+    index_page_template_path = "./templates/home.html"
 
+    soup = soup_from_path(index_page_template_path)
     blog_list = soup.find(id="blog-list")
 
     for i, blog in enumerate(blogs):
-        with open(
-            "./templates/blog_link.html", "r", encoding="utf-8"
-        ) as template_contents:
-            link_template_soup = BeautifulSoup(template_contents.read(), "html.parser")
+        link_template_soup = soup_from_path(link_template_path)
 
         link = link_template_soup.find(id="synopsis-link")
         date = link_template_soup.find(id="synopsis-date")
         synopsis = link_template_soup.find(id="synopsis-paragraph")
 
-        link.string = blog["title"]
-        date.string = f'({blog['date'] if blog['date'] is not None else 'sem data'}) - '
-        synopsis.string = blog["synopsis"][:SYNOPSIS_LENGTH_LIMIT] + "..."
+        link.string = blog.title
+        date.string = f'({blog.date if blog.date is not None else 'sem data'}) - '
+        synopsis.string = blog.synopsis[:SYNOPSIS_LENGTH_LIMIT] + "..."
 
-        link["href"] = blog["url"]
+        link["href"] = blog.url
 
         link["id"] = f"{link["id"]}_{str(i)}"
         date["id"] = f"{date["id"]}_{str(i)}"
@@ -95,15 +124,9 @@ def compile_index(blogs: list[dict], index_path: str, layout_path: str) -> None:
 
         blog_list.append(link_template_soup)
 
-    with open(layout_path, "r", encoding="utf-8") as file:
-        template_content = file.read()
-        template_soup = BeautifulSoup(template_content, "html.parser")
-
-        title = "Home"
-        template_soup.title.string = f"jubelogs - {title}"
-        template_soup.find(id="content").append(soup)
-        with open(index_path, "w", encoding="utf-8") as index:
-            index.write(template_soup.prettify())
+    write_to_path(
+        index_path, apply_layout(soup.prettify(), read_from_path(layout_path), "Home")
+    )
 
 
 def main(
