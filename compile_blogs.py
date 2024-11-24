@@ -1,11 +1,18 @@
 import os
 import pathlib
+import re
 from datetime import datetime, timezone
 import markdown
+import unicodedata
 from dataclasses import dataclass
 from bs4 import BeautifulSoup
 
 SYNOPSIS_LENGTH_LIMIT = 200
+SITE_NAME = "jubelogs"
+TEMPLATE_PATH = "./templates/layout.html"
+SOUP_PARSER = "html.parser"
+POSTS_FRAGMET = "blogs"
+DEFAULT_TITLE = "sem título"
 
 
 @dataclass
@@ -16,6 +23,7 @@ class Blog:
     synopsis: str
     path: str
     markup: str
+    category: str | None
 
 
 def date_from_path(path: str) -> str:
@@ -29,96 +37,170 @@ def read_from_path(path: str) -> str:
         return file.read()
 
 
+def normalize_string(string: str | None) -> str:
+    if not string:
+        return
+    normalized_str = unicodedata.normalize("NFKD", string)
+    ascii_str = "".join(c for c in normalized_str if not unicodedata.combining(c))
+    formatted_str = ascii_str.replace(" ", "_").lower()
+    return formatted_str
+
+
+def subindex_name(category_name: str) -> str:
+    return f"index_{normalize_string(category_name)}.html"
+
+
+def extract_category(path: str) -> str | None:
+    with open(path, "r", encoding="utf-8") as file:
+        first_line = file.readline()
+        match = re.search(r"\[comment\]: # \((.*)\)", first_line)
+        if match is not None:
+            return match.group(1).strip()
+
+
 def write_to_path(path: str, contents: str) -> None:
     with open(path, "w", encoding="utf-8") as file:
         file.write(contents)
 
 
 def soup_from_path(path: str) -> BeautifulSoup:
-    return BeautifulSoup(read_from_path(path), "html.parser")
+    return BeautifulSoup(read_from_path(path), SOUP_PARSER)
 
 
-def apply_layout(content_markup: str, layout_markup: str, page_title: str) -> str:
+def apply_layout(
+    content_markup: str, layout_markup: str, page_title: str, blog_categories: set[str]
+) -> str:
     """Apply layout to content markup"""
-    content_soup = BeautifulSoup(content_markup, "html.parser")
-    layout_soup = BeautifulSoup(layout_markup, "html.parser")
+    content_soup = BeautifulSoup(content_markup, SOUP_PARSER)
+    layout_soup = BeautifulSoup(layout_markup, SOUP_PARSER)
 
-    layout_soup.title.string = f"jubelogs - {page_title}"
+    layout_soup.title.string = f"{SITE_NAME} - {page_title}"
     layout_soup.find(id="content").append(content_soup)
+
+    if len(blog_categories):
+        category_list_container = layout_soup.find(id="category_list")
+        category_list_soup = soup_from_path("./templates/category_list.html")
+
+        for category in blog_categories:
+            category_link_soup = soup_from_path("./templates/category_link.html")
+            anchor = category_link_soup.find("a")
+            anchor["href"] = f"/{subindex_name(category)}"
+            anchor.string = category
+            category_list_soup.append(category_link_soup)
+
+        category_list_container.append(category_list_soup)
 
     return layout_soup.prettify()
 
 
-def convert_post(src_path: str, target_folder: str, template_markup: str) -> Blog:
+def convert_post(src_path: str, target_folder: str) -> Blog:
     """
     Convert the file at `src_path` and write it to `target_folder`, given the html template passed in.
     """
 
+    src_file = read_from_path(src_path)
+
     transpiled_soup = BeautifulSoup(
-        markdown.markdown(read_from_path(src_path), extensions=["extra"]), "html.parser"
+        markdown.markdown(src_file, extensions=["extra"]), SOUP_PARSER
     )
 
-    title = transpiled_soup.find("h1")
+    if not transpiled_soup.find("h1"):
+        header = transpiled_soup.new_tag("h1")
+        header.string = DEFAULT_TITLE
+        transpiled_soup.insert(0, header)
+
+    title_element = transpiled_soup.find("h1")
+    category = extract_category(src_path)
     synopsis = transpiled_soup.find("p").string
 
-    target_markup = apply_layout(
-        transpiled_soup.prettify(), template_markup, f"jubelogs - {title.string}"
-    )
+    if category:
+        category_tag = transpiled_soup.new_tag("h3")
+        category_link = transpiled_soup.new_tag("a")
+        category_link["href"] = f"/{subindex_name(category)}"
+        category_link.string = f"[{category}]"
+        category_tag.append(category_link)
+
+        transpiled_soup.find("h1").insert_after(category_tag)
 
     target_filename = f"{os.path.splitext(os.path.basename(src_path))[0]}.html"
-    target_path = os.path.join(target_folder, target_filename)
+    target_path = os.path.join(target_folder, POSTS_FRAGMET, target_filename)
 
-    return Blog(
+    blog = Blog(
         url=f"/blogs/{target_filename}",
-        title=title.string,
+        title=title_element.string,
         date=date_from_path(src_path),
         synopsis=synopsis,
         path=target_path,
-        markup=target_markup,
+        markup=transpiled_soup.prettify(),
+        category=category,
     )
+
+    return blog
 
 
 def compile_blogs(
-    source_folder: str, target_folder: str, template_path: str
+    source_folder: str, target_folder: str, categories: set[str]
 ) -> list[Blog]:
     """
     Given the path for the source and target folders and the blank html template, convert and write all blog posts to
     location
     """
+
     blogs: list[Blog] = []
 
     os.makedirs(target_folder, exist_ok=True)
-
-    print(
-        [el for el in os.walk(source_folder)]
-    )  # TODO: add blog categorization via subdirectories in src_dir
-
-    template_markup = read_from_path(template_path)
+    os.makedirs(os.path.join(target_folder, POSTS_FRAGMET), exist_ok=True)
 
     for filename in os.listdir(source_folder):
-        src_path = os.path.join(source_folder, filename)
+        src_path = os.path.join(source_folder, filename)  # ./posts/post.md
         if os.path.isfile(src_path) and pathlib.Path(src_path).suffix in [
             ".md",
             ".MD",
             ".markdown",
         ]:
-            blog = convert_post(src_path, target_folder, template_markup)
+            blog = convert_post(src_path, target_folder)
             blogs.append(blog)
-            write_to_path(blog.path, blog.markup)
+            if blog.category:
+                categories.add(blog.category)
 
+    template_markup = read_from_path(TEMPLATE_PATH)
     blogs.sort(key=lambda blog: datetime.strptime(blog.date, "%Y-%m-%d"), reverse=True)
 
+    for blog in blogs:
+        blog.markup = apply_layout(blog.markup, template_markup, blog.title, categories)
+        write_to_path(blog.path, blog.markup)
+
+    compile_index(blogs, target_folder, categories)
+    for category in categories:
+        compile_index(blogs, target_folder, categories, category)
     return blogs
 
 
-def compile_index(  # TODO: make it generic enough to generate all sub-indexes as well as the main one
+def compile_index(
     blogs: list[Blog],
-    index_path: str,
-    layout_path: str,
-    link_template_path: str,
-    index_page_template_path: str,
+    target_folder: str,
+    categories: set[str],
+    subindex_categoria: str = None,
 ) -> None:
     """Compile index.html file with links to all blogs"""
+
+    if subindex_categoria:
+        filename = subindex_name(subindex_categoria)
+        title = subindex_categoria
+        blogs = filter(
+            lambda blog: normalize_string(blog.category)
+            == normalize_string(subindex_categoria),
+            blogs,
+        )
+    else:
+        filename = "index.html"
+        title = "Home"
+
+    index_path = pathlib.Path(target_folder) / filename
+
+    link_template_path = "./templates/blog_link.html"
+    index_page_template_path = "./templates/home.html"
+
     soup = soup_from_path(index_page_template_path)
     blog_list = soup.find(id="blog-list")
 
@@ -127,10 +209,14 @@ def compile_index(  # TODO: make it generic enough to generate all sub-indexes a
 
         link = link_template_soup.find(id="synopsis-link")
         date = link_template_soup.find(id="synopsis-date")
+        category = link_template_soup.find(id="synopsis-category")
         synopsis = link_template_soup.find(id="synopsis-paragraph")
 
         link.string = blog.title
         date.string = f'({blog.date if blog.date is not None else 'sem data'}) - '
+        if blog.category:
+            category.string = f"[{blog.category}] - "
+
         synopsis.string = blog.synopsis[:SYNOPSIS_LENGTH_LIMIT] + "..."
 
         link["href"] = blog.url
@@ -142,37 +228,19 @@ def compile_index(  # TODO: make it generic enough to generate all sub-indexes a
         blog_list.append(link_template_soup)
 
     write_to_path(
-        index_path, apply_layout(soup.prettify(), read_from_path(layout_path), "Home")
+        index_path,
+        apply_layout(soup.prettify(), read_from_path(TEMPLATE_PATH), title, categories),
     )
 
 
-def main(
-    source_folder: str,
-    target_folder: str,
-    post_template: str,
-    index_path: str,
-    link_template_path: str,
-    index_page_template_path: str,
-) -> None:
-    blogs = compile_blogs(source_folder, target_folder, post_template)
-    compile_index(
-        blogs, index_path, post_template, link_template_path, index_page_template_path
-    )
+def main() -> None:
+    categories = set()
+
+    source_folder = "./blogs"
+    target_folder = "./website"
+
+    compile_blogs(source_folder, target_folder, categories)
 
 
 if __name__ == "__main__":
-    source_folder = "./posts"
-    target_folder = "./website/blogs"
-    template_path = "./templates/layout.html"
-    index_path = "./website/index.html"
-    link_template_path = "./templates/blog_link.html"
-    index_page_template_path = "./templates/home.html"
-
-    main(
-        source_folder,
-        target_folder,
-        template_path,
-        index_path,
-        link_template_path,
-        index_page_template_path,
-    )
+    main()

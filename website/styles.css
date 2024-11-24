@@ -313,6 +313,11 @@ strong {
   padding: 0 1rem 0.5rem 1rem;
 }
 
+.post-content-box {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+}
+
 dd {
   display: list-item;
   list-style-type: "☆";

@@ -163,4 +163,4 @@ cython_debug/
 
 website/blogs
 website/assets/blogs
-posts/**/*.md
+blogs/**/*.md
