@@ -13,6 +13,7 @@ TEMPLATE_PATH = "./templates/layout.html"
 SOUP_PARSER = "html.parser"
 POSTS_FRAGMET = "blogs"
 DEFAULT_TITLE = "sem título"
+SEPARATOR_STRING = " - "
 
 
 @dataclass
@@ -74,7 +75,7 @@ def apply_layout(
     content_soup = BeautifulSoup(content_markup, SOUP_PARSER)
     layout_soup = BeautifulSoup(layout_markup, SOUP_PARSER)
 
-    layout_soup.title.string = f"{SITE_NAME} - {page_title}"
+    layout_soup.title.string = f"{SITE_NAME}{SEPARATOR_STRING}{page_title}"
     layout_soup.find(id="content").append(content_soup)
 
     if len(blog_categories):
@@ -110,11 +111,19 @@ def convert_post(src_path: str, target_folder: str) -> Blog:
         transpiled_soup.insert(0, header)
 
     title_element = transpiled_soup.find("h1")
+
+    if not transpiled_soup.find("p"):
+        paragraph = transpiled_soup.new_tag("p")
+        paragraph.string = SEPARATOR_STRING
+        title_element.insert_after(paragraph)
+
+    synopsis_element = transpiled_soup.find("p")
+
     content_container = soup_from_path("./templates/blog_contents.html").find(
         id="blog-contents-container"
     )
+
     category = extract_category(src_path)
-    synopsis = transpiled_soup.find("p").string
 
     for element in title_element.find_all_next():
         content_container.append(element.extract())
@@ -137,7 +146,7 @@ def convert_post(src_path: str, target_folder: str) -> Blog:
         url=f"/blogs/{target_filename}",
         title=title_element.string,
         date=date_from_path(src_path),
-        synopsis=synopsis,
+        synopsis=synopsis_element.string,
         path=target_path,
         markup=transpiled_soup.prettify(),
         category=category,
@@ -192,25 +201,36 @@ def compile_index(
 ) -> None:
     """Compile index.html file with links to all blogs"""
 
+    link_template_path = "./templates/blog_link.html"
+    index_page_template_path = "./templates/home.html"
+
+    soup = soup_from_path(index_page_template_path)
+    blog_list = soup.find(id="blog-list")
+    index_title = soup.find(id="index-title")
+
     if subindex_categoria:
         filename = subindex_name(subindex_categoria)
         title = subindex_categoria
+
+        span_category = soup.new_tag("span")
+        span_category["class"] = "special-text"
+        span_category.string = f"[{subindex_categoria}]"
+        index_title.string = "Blogs recentes"
+
+        index_title.append(span_category)
+        index_title.append(":")
+
         blogs = filter(
             lambda blog: normalize_string(blog.category)
             == normalize_string(subindex_categoria),
             blogs,
         )
     else:
+        index_title.string = "Blogs recentes:"
         filename = "index.html"
         title = "Home"
 
     index_path = pathlib.Path(target_folder) / filename
-
-    link_template_path = "./templates/blog_link.html"
-    index_page_template_path = "./templates/home.html"
-
-    soup = soup_from_path(index_page_template_path)
-    blog_list = soup.find(id="blog-list")
 
     for i, blog in enumerate(blogs):
         link_template_soup = soup_from_path(link_template_path)
@@ -221,9 +241,15 @@ def compile_index(
         synopsis = link_template_soup.find(id="synopsis-paragraph")
 
         link.string = blog.title
-        date.string = f'({blog.date if blog.date is not None else 'sem data'}) - '
+        date.string = (
+            f'({blog.date if blog.date is not None else 'sem data'}){SEPARATOR_STRING}'
+        )
         if blog.category:
-            category.string = f"[{blog.category}] - "
+            category_link = link_template_soup.new_tag("a")
+            category_link["href"] = f"/{subindex_name(blog.category)}"
+            category_link.string = f"[{blog.category}]"
+            category.append(category_link)
+            category.append(SEPARATOR_STRING)
 
         synopsis.string = blog.synopsis[:SYNOPSIS_LENGTH_LIMIT] + "..."
 
@@ -242,10 +268,9 @@ def compile_index(
 
 
 def main() -> None:
-    categories = set()
-
     source_folder = "./blogs"
     target_folder = "./website"
+    categories = set()
 
     compile_blogs(source_folder, target_folder, categories)
 
