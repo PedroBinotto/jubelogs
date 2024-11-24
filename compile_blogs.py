@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 import markdown
 import unicodedata
 from dataclasses import dataclass
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
+
 
 SYNOPSIS_LENGTH_LIMIT = 200
 SITE_NAME = "jubelogs"
@@ -51,6 +52,13 @@ def subindex_name(category_name: str) -> str:
     return f"index_{normalize_string(category_name)}.html"
 
 
+def generate_subindex_element(soup: BeautifulSoup, subindex: str) -> Tag:
+    category_link = soup.new_tag("a")
+    category_link["href"] = f"/{subindex_name(subindex)}"
+    category_link.string = f"[{subindex}]"
+    return category_link
+
+
 def extract_category(path: str) -> str | None:
     with open(path, "r", encoding="utf-8") as file:
         first_line = file.readline()
@@ -83,11 +91,11 @@ def apply_layout(
         category_list_soup = soup_from_path("./templates/category_list.html")
 
         for category in blog_categories:
-            category_link_soup = soup_from_path("./templates/category_link.html")
-            anchor = category_link_soup.find("a")
-            anchor["href"] = f"/{subindex_name(category)}"
-            anchor.string = category
-            category_list_soup.append(category_link_soup)
+            category_list_item = category_list_soup.new_tag("li")
+            category_list_item.append(
+                generate_subindex_element(category_list_soup, category)
+            )
+            category_list_soup.append(category_list_item)
 
         category_list_container.append(category_list_soup)
 
@@ -102,7 +110,14 @@ def convert_post(src_path: str, target_folder: str) -> Blog:
     src_file = read_from_path(src_path)
 
     transpiled_soup = BeautifulSoup(
-        markdown.markdown(src_file, extensions=["extra"]), SOUP_PARSER
+        markdown.markdown(
+            src_file,
+            extensions=["extra", "pymdownx.emoji"],
+            extension_configs={
+                "pymdownx.emoji": {"emoji_generator": lambda *args: args[4]}
+            },
+        ),
+        SOUP_PARSER,
     )
 
     if not transpiled_soup.find("h1"):
@@ -132,10 +147,7 @@ def convert_post(src_path: str, target_folder: str) -> Blog:
 
     if category:
         category_tag = transpiled_soup.new_tag("h3")
-        category_link = transpiled_soup.new_tag("a")
-        category_link["href"] = f"/{subindex_name(category)}"
-        category_link.string = f"[{category}]"
-        category_tag.append(category_link)
+        category_tag.append(generate_subindex_element(transpiled_soup, category))
 
         transpiled_soup.find("h1").insert_after(category_tag)
 
@@ -211,13 +223,8 @@ def compile_index(
     if subindex_categoria:
         filename = subindex_name(subindex_categoria)
         title = subindex_categoria
-
-        span_category = soup.new_tag("span")
-        span_category["class"] = "special-text"
-        span_category.string = f"[{subindex_categoria}]"
         index_title.string = "Blogs recentes"
-
-        index_title.append(span_category)
+        index_title.append(generate_subindex_element(soup, subindex_categoria))
         index_title.append(":")
 
         blogs = filter(
@@ -245,10 +252,9 @@ def compile_index(
             f'({blog.date if blog.date is not None else 'sem data'}){SEPARATOR_STRING}'
         )
         if blog.category:
-            category_link = link_template_soup.new_tag("a")
-            category_link["href"] = f"/{subindex_name(blog.category)}"
-            category_link.string = f"[{blog.category}]"
-            category.append(category_link)
+            category.append(
+                generate_subindex_element(link_template_soup, blog.category)
+            )
             category.append(SEPARATOR_STRING)
 
         synopsis.string = blog.synopsis[:SYNOPSIS_LENGTH_LIMIT] + "..."
