@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup, Tag
 
 
 SYNOPSIS_LENGTH_LIMIT = 200
+RECENT_BLOGS_LIST_MAX = 5
 SITE_NAME = "jubelogs"
 TEMPLATE_PATH = "./templates/layout.html"
 SOUP_PARSER = "html.parser"
@@ -59,6 +60,13 @@ def generate_subindex_element(soup: BeautifulSoup, subindex: str) -> Tag:
     return category_link
 
 
+def generate_blog_link(soup: BeautifulSoup, blog: Blog) -> Tag:
+    link = soup.new_tag("a")
+    link["href"] = blog.url
+    link.string = blog.title
+    return link
+
+
 def extract_category(path: str) -> str | None:
     with open(path, "r", encoding="utf-8") as file:
         first_line = file.readline()
@@ -77,27 +85,52 @@ def soup_from_path(path: str) -> BeautifulSoup:
 
 
 def apply_layout(
-    content_markup: str, layout_markup: str, page_title: str, blog_categories: set[str]
+    content_markup: str,
+    layout_markup: str,
+    page_title: str,
+    blog_categories: set[str],
+    blogs: list[Blog],
 ) -> str:
     """Apply layout to content markup"""
+
+    def list_categories(mount_point: Tag, categories: set[str]):
+        category_list_soup = soup_from_path("./templates/category_list.html")
+        list_element = category_list_soup.find(id="category_list_ul")
+
+        for category in categories:
+            category_list_item = category_list_soup.new_tag("li")
+            category_list_item.append(
+                generate_subindex_element(category_list_soup, category)
+            )
+            list_element.append(category_list_item)
+
+        mount_point.append(category_list_soup)
+
+    def list_blogs(mount_point: BeautifulSoup, blog_list: list[Blog]):
+        recent_list_soup = soup_from_path("./templates/latest_updates_list.html")
+        list_element = recent_list_soup.find(id="latest_updates_ul")
+
+        most_recent = blog_list[:RECENT_BLOGS_LIST_MAX]
+
+        for blog in most_recent:
+            recent_blog_item = recent_list_soup.new_tag("li")
+            recent_blog_item.append(generate_blog_link(recent_list_soup, blog))
+            recent_blog_item.append(";")
+            list_element.append(recent_blog_item)
+
+        mount_point.append(recent_list_soup)
+
     content_soup = BeautifulSoup(content_markup, SOUP_PARSER)
     layout_soup = BeautifulSoup(layout_markup, SOUP_PARSER)
 
     layout_soup.title.string = f"{SITE_NAME}{SEPARATOR_STRING}{page_title}"
     layout_soup.find(id="content").append(content_soup)
 
+    if len(blogs):
+        list_blogs(layout_soup.find(id="updates_list"), blogs)
+
     if len(blog_categories):
-        category_list_container = layout_soup.find(id="category_list")
-        category_list_soup = soup_from_path("./templates/category_list.html")
-
-        for category in blog_categories:
-            category_list_item = category_list_soup.new_tag("li")
-            category_list_item.append(
-                generate_subindex_element(category_list_soup, category)
-            )
-            category_list_soup.append(category_list_item)
-
-        category_list_container.append(category_list_soup)
+        list_categories(layout_soup.find(id="category_list"), blog_categories)
 
     return layout_soup.prettify()
 
@@ -196,7 +229,9 @@ def compile_blogs(
     blogs.sort(key=lambda blog: datetime.strptime(blog.date, "%Y-%m-%d"), reverse=True)
 
     for blog in blogs:
-        blog.markup = apply_layout(blog.markup, template_markup, blog.title, categories)
+        blog.markup = apply_layout(
+            blog.markup, template_markup, blog.title, categories, blogs
+        )
         write_to_path(blog.path, blog.markup)
 
     compile_index(blogs, target_folder, categories)
@@ -227,7 +262,7 @@ def compile_index(
         index_title.append(generate_subindex_element(soup, subindex_categoria))
         index_title.append(":")
 
-        blogs = filter(
+        filtered_blogs = filter(
             lambda blog: normalize_string(blog.category)
             == normalize_string(subindex_categoria),
             blogs,
@@ -239,7 +274,7 @@ def compile_index(
 
     index_path = pathlib.Path(target_folder) / filename
 
-    for i, blog in enumerate(blogs):
+    for i, blog in enumerate(filtered_blogs if subindex_categoria else blogs):
         link_template_soup = soup_from_path(link_template_path)
 
         link = link_template_soup.find(id="synopsis-link")
@@ -269,7 +304,9 @@ def compile_index(
 
     write_to_path(
         index_path,
-        apply_layout(soup.prettify(), read_from_path(TEMPLATE_PATH), title, categories),
+        apply_layout(
+            soup.prettify(), read_from_path(TEMPLATE_PATH), title, categories, blogs
+        ),
     )
 
 
