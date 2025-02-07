@@ -191,7 +191,7 @@ def convert_post(src_path: str, target_folder: str) -> Blog:
         url=f"/blogs/{target_filename}",
         title=title_element.string,
         date=date_from_path(src_path),
-        synopsis=synopsis_element.string,
+        synopsis=synopsis_element.text,
         path=target_path,
         markup=transpiled_soup.prettify(),
         category=category,
