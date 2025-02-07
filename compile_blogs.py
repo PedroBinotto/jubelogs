@@ -11,7 +11,8 @@ from bs4 import BeautifulSoup, Tag
 SYNOPSIS_LENGTH_LIMIT = 200
 RECENT_BLOGS_LIST_MAX = 5
 SITE_NAME = "jubelogs"
-TEMPLATE_PATH = "./templates/layout.html"
+TEMPLATE_DIR = "./templates"
+LAYOUT_PATH = f"{TEMPLATE_DIR}/layout.html"
 SOUP_PARSER = "html.parser"
 POSTS_FRAGMET = "blogs"
 DEFAULT_TITLE = "sem título"
@@ -94,7 +95,7 @@ def apply_layout(
     """Apply layout to content markup"""
 
     def list_categories(mount_point: Tag, categories: set[str]):
-        category_list_soup = soup_from_path("./templates/category_list.html")
+        category_list_soup = soup_from_path(f"{TEMPLATE_DIR}/category_list.html")
         list_element = category_list_soup.find(id="category_list_ul")
 
         for category in categories:
@@ -107,7 +108,7 @@ def apply_layout(
         mount_point.append(category_list_soup)
 
     def list_blogs(mount_point: BeautifulSoup, blog_list: list[Blog]):
-        recent_list_soup = soup_from_path("./templates/latest_updates_list.html")
+        recent_list_soup = soup_from_path(f"{TEMPLATE_DIR}/latest_updates_list.html")
         list_element = recent_list_soup.find(id="latest_updates_ul")
 
         most_recent = blog_list[:RECENT_BLOGS_LIST_MAX]
@@ -216,7 +217,7 @@ def compile_blogs(
             if blog.category:
                 categories.add(blog.category)
 
-    template_markup = read_from_path(TEMPLATE_PATH)
+    template_markup = read_from_path(LAYOUT_PATH)
     blogs.sort(key=lambda blog: datetime.strptime(blog.date, "%Y-%m-%d"), reverse=True)
 
     for blog in blogs:
@@ -239,8 +240,8 @@ def compile_index(
 ) -> None:
     """Compile index.html file with links to all blogs"""
 
-    link_template_path = "./templates/blog_link.html"
-    index_page_template_path = "./templates/home.html"
+    link_template_path = f"{TEMPLATE_DIR}/blog_link.html"
+    index_page_template_path = f"{TEMPLATE_DIR}/home.html"
 
     soup = soup_from_path(index_page_template_path)
     blog_list = soup.find(id="blog-list")
@@ -296,7 +297,7 @@ def compile_index(
     write_to_path(
         index_path,
         apply_layout(
-            soup.prettify(), read_from_path(TEMPLATE_PATH), title, categories, blogs
+            soup.prettify(), read_from_path(LAYOUT_PATH), title, categories, blogs
         ),
     )
 
