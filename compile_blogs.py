@@ -167,16 +167,16 @@ def convert_post(src_path: str, target_folder: str) -> Blog:
 
     synopsis_element = transpiled_soup.find("p")
 
-    content_container = soup_from_path("./templates/blog_contents.html").find(
-        id="blog-contents-container"
-    )
+#   content_container = soup_from_path("./templates/blog_contents.html").find(
+#       id="blog-contents-container"
+#   )
 
     category = extract_category(src_path)
 
-    for element in title_element.find_all_next():
-        content_container.append(element.extract())
+#   for element in title_element.find_all_next():
+#       content_container.append(element.extract())
 
-    title_element.insert_after(content_container)
+#   title_element.insert_after(content_container)
 
     if category:
         category_tag = transpiled_soup.new_tag("h3")
