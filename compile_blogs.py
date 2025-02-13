@@ -174,8 +174,9 @@ def convert_post(src_path: str, target_folder: str) -> Blog:
         category_tag = transpiled_soup.new_tag("h3")
         category_tag.append(generate_subindex_element(transpiled_soup, category))
 
-        transpiled_soup.find("h1").insert_after(category_tag)
+        title_element.insert_after(category_tag)
 
+    title_element["class"] = "special-text"
     target_filename = f"{os.path.splitext(os.path.basename(src_path))[0]}.html"
     target_path = os.path.join(target_folder, POSTS_FRAGMET, target_filename)
 
