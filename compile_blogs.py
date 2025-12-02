@@ -32,7 +32,7 @@ class Blog:
 
 def date_from_path(path: str) -> str:
     return datetime.fromtimestamp(
-        pathlib.Path(path).stat().st_ctime, tz=timezone.utc
+        pathlib.Path(path).stat().st_mtime, tz=timezone.utc
     ).strftime("%Y-%m-%d")
 
 
@@ -277,7 +277,7 @@ def compile_index(
 
         link.string = blog.title
         date.string = (
-            f'({blog.date if blog.date is not None else 'sem data'}){SEPARATOR_STRING}'
+            f"({blog.date if blog.date is not None else 'sem data'}){SEPARATOR_STRING}"
         )
         if blog.category:
             category.append(
@@ -289,9 +289,9 @@ def compile_index(
 
         link["href"] = blog.url
 
-        link["id"] = f"{link["id"]}_{str(i)}"
-        date["id"] = f"{date["id"]}_{str(i)}"
-        synopsis["id"] = f"{synopsis["id"]}_{str(i)}"
+        link["id"] = f"{link['id']}_{str(i)}"
+        date["id"] = f"{date['id']}_{str(i)}"
+        synopsis["id"] = f"{synopsis['id']}_{str(i)}"
 
         blog_list.append(link_template_soup)
 
